@@ -37,7 +37,7 @@ func handleRequest(context context.Context, payload Payload) error {
 	}
 
 	fmt.Printf("Response body: %s\r\n", string(response.Body))
-	fmt.Printf("Response status: %s\r\n", string(response.Status))
+	fmt.Printf("Response status: %s\r\n", fmt.Sprint(response.Status))
 
 	err = sendCallback(response)
 	if err != nil {
