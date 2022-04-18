@@ -2,15 +2,16 @@ package main
 
 import (
 	"bytes"
-	"strings"
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/aws/aws-lambda-go/lambda"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
+	"strings"
+
+	"github.com/aws/aws-lambda-go/lambda"
 )
 
 type Payload struct {
@@ -22,15 +23,17 @@ type Payload struct {
 }
 
 type Response struct {
-	Id string
-	Status string
-	Body string
+	Id     string
+	Type   string
+	Status int
+	Body   string
+	Reason string
 }
 
 func handleRequest(context context.Context, payload Payload) error {
 	response, err := sendRequest(context, payload)
 	if err != nil {
-		log.Fatal(err)
+		throwError(err, payload)
 	}
 
 	fmt.Printf("Response body: %s\r\n", string(response.Body))
@@ -38,7 +41,7 @@ func handleRequest(context context.Context, payload Payload) error {
 
 	err = sendCallback(response)
 	if err != nil {
-		log.Fatal(err)
+		throwError(err, payload)
 	}
 
 	return nil
@@ -46,6 +49,11 @@ func handleRequest(context context.Context, payload Payload) error {
 
 func main() {
 	lambda.Start(handleRequest)
+}
+
+func throwError(err error, payload Payload) {
+	sendCallback(Response{Type: "error", Id: payload.Id, Reason: err.Error()})
+	log.Fatal(err)
 }
 
 func sendRequest(context context.Context, payload Payload) (Response, error) {
@@ -64,6 +72,9 @@ func sendRequest(context context.Context, payload Payload) (Response, error) {
 	method := strings.ToUpper(payload.Method)
 
 	req, err := http.NewRequest(method, endpoint, bytes.NewBuffer(body))
+	if err != nil {
+		return Response{}, err
+	}
 
 	// default headers are added
 	req.Header.Set("Cache-Control", "no-cache")
@@ -102,14 +113,15 @@ func sendRequest(context context.Context, payload Payload) (Response, error) {
 		return Response{}, err
 	}
 
-	return Response{Id: id, Status: resp.Status, Body: string(responseBody)}, nil
+	return Response{Type: "ok", Id: id, Status: resp.StatusCode, Body: string(responseBody)}, nil
 }
 
 func sendCallback(response Response) error {
 	callbackEndpoint := "https://api.bloodbath.io/internal/callback"
 
 	body := &Response{
-		Body: response.Body,
+		Id:     response.Id,
+		Body:   response.Body,
 		Status: response.Status,
 	}
 
@@ -130,9 +142,13 @@ func sendCallback(response Response) error {
 
 	defer endResponse.Body.Close()
 
-	fmt.Println("response Status:", endResponse.Status)
+	fmt.Println("response Status:", endResponse.StatusCode)
 	fmt.Println("response Headers:", endResponse.Header)
 	endBody, err := ioutil.ReadAll(endResponse.Body)
+	if err != nil {
+		return err
+	}
+
 	fmt.Println("response Body:", string(endBody))
 
 	return nil
