@@ -14,6 +14,10 @@ import (
 	"github.com/aws/aws-lambda-go/lambda"
 )
 
+const (
+	callbackEndpoint = "https://api.bloodbath.io/internal/callback"
+)
+
 type Payload struct {
 	Id       string `json:"id"`
 	Body     string `json:"body"`
@@ -117,8 +121,6 @@ func sendRequest(context context.Context, payload Payload) (Response, error) {
 }
 
 func sendCallback(response Response) error {
-	callbackEndpoint := "https://api.bloodbath.io/internal/callback"
-
 	body := &Response{
 		Type:   response.Type,
 		Id:     response.Id,
