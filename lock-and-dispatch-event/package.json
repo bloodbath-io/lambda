@@ -1,0 +1,12 @@
+{
+  "name": "lock-and-dispatch-event",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "scripts": {
+    "build": "GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o main main.go",
+    "zip": "zip main.zip main",
+    "push": "aws lambda update-function-code --function-name lock-and-dispatch-event --zip-file fileb://main.zip",
+    "deploy": "yarn build && yarn zip && yarn push"
+  }
+}
