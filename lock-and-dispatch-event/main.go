@@ -120,6 +120,7 @@ func sendCallback(response Response) error {
 	callbackEndpoint := "https://api.bloodbath.io/internal/callback"
 
 	body := &Response{
+		Type:   response.Type,
 		Id:     response.Id,
 		Body:   response.Body,
 		Status: response.Status,
