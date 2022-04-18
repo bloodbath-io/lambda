@@ -27,11 +27,12 @@ type Payload struct {
 }
 
 type Response struct {
-	Id     string `json:"id"`
-	Type   string `json:"type"`
-	Status int    `json:"status"`
-	Body   string `json:"body"`
-	Reason string `json:"reason"`
+	Id      string `json:"id"`
+	Type    string `json:"type"`
+	Status  int    `json:"status"`
+	Headers string `json:"headers"`
+	Body    string `json:"body"`
+	Reason  string `json:"reason"`
 }
 
 func handleRequest(context context.Context, payload Payload) error {
@@ -117,15 +118,23 @@ func sendRequest(context context.Context, payload Payload) (Response, error) {
 		return Response{}, err
 	}
 
-	return Response{Type: "ok", Id: id, Status: resp.StatusCode, Body: string(responseBody)}, nil
+	return Response{
+		Type:    "ok",
+		Id:      id,
+		Status:  resp.StatusCode,
+		Body:    string(responseBody),
+		Headers: fmt.Sprint(resp.Header),
+	}, nil
 }
 
 func sendCallback(response Response) error {
 	body := &Response{
-		Type:   response.Type,
-		Id:     response.Id,
-		Body:   response.Body,
-		Status: response.Status,
+		Type:    response.Type,
+		Id:      response.Id,
+		Body:    response.Body,
+		Status:  response.Status,
+		Headers: response.Headers,
+		Reason:  response.Reason,
 	}
 
 	payloadBuf := new(bytes.Buffer)
