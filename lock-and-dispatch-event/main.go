@@ -21,10 +21,6 @@ type Payload struct {
 	Method   string `json:"method"`
 }
 
-type Headers struct {
-	ContentType string `json:"content-Type"`
-}
-
 func handleRequest(context context.Context, payload Payload) error {
 	printablePayload, _ := json.Marshal(payload)
 	printableContext, _ := json.Marshal(context)
@@ -35,20 +31,15 @@ func handleRequest(context context.Context, payload Payload) error {
 	body, _ := json.Marshal(payload.Body)
 	endpoint := payload.Endpoint
 
-	// 	var formattedHeaders map[string]string
-
-	var headers Headers
+	var headers map[string]string
 	json.Unmarshal([]byte(payload.Headers), &headers)
-
-	// headers, _ := json.Marshal(payload.Headers)
-	// _ = json.Unmarshal(headers, &formattedHeaders)
 
 	method := strings.ToUpper(payload.Method)
 
 	req, err := http.NewRequest(method, endpoint, bytes.NewBuffer(body))
 
-	fmt.Printf("Content-Type: %s\r\n", headers.ContentType)
-	req.Header.Set("Content-Type", headers.ContentType)
+	// default headers are added
+	req.Header.Set("Cache-Control", "no-cache")
 
 	// we need to transmit the host
 	// as a header to avoid 400 Bad Request
@@ -60,26 +51,16 @@ func handleRequest(context context.Context, payload Payload) error {
 	fmt.Printf("Host: %s\r\n", parsedEndpoint.Host)
 	req.Host = parsedEndpoint.Host
 
-	// other headers
-	req.Header.Set("Cache-Control", "no-cache")
+	// we parse all the headers sent
+	// from bloodbath and set them up
+	for key, value := range headers {
+		fmt.Printf("Parsing the header `%s` : `%s`\r\n", key, value)
+		req.Header.Set(key, value)
+	}
 
-	// fmt.Printf("This is the headers we will send: %s", headers)
-
-	// for key, value := range headers {
-	// 	fmt.Printf("Parsing the header `%s` : `%s`\r\n", key, value)
-	// 	req.Header.Set(key, value)
-	// }
-
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-
-	// // appending to existing query args
-	// query := req.URL.Query()
-	// // q.Add("foo", "bar")
-
-	// // assign encoded query string to http request
-	// req.URL.RawQuery = query.Encode()
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -95,31 +76,9 @@ func handleRequest(context context.Context, payload Payload) error {
 	}
 
 	// TODO: deal with response and send it back to bloodbath
-	fmt.Printf("It went well for ID: %s", id)
-	fmt.Printf("Status received is: %s", resp.Status)
-	fmt.Printf("Body received is: %s", string(responseBody))
-
-	// TESTING OUT
-	// hey, err := http.NewRequest("GET", "https://dummy.bloodbath.io/lets-try", nil)
-	// hey.Host = "dummy.bloodbath.io"
-	// clientx := &http.Client{}
-	// yo, err := clientx.Do(hey)
-
-	// // yo, err := http.Get("https://dummy.bloodbath.io/lets-try")
-  // // if err != nil {
-  // //     log.Fatal(err)
-  // // }
-
-  // defer yo.Body.Close()
-
-  // b, err := ioutil.ReadAll(yo.Body)
-  // if err != nil {
-  //     log.Fatal(err)
-  // }
-
-	// fmt.Printf("TESTING AFTER THAT \r\n")
-  // fmt.Printf(string(b))
-	// END OF TESTING OUT
+	fmt.Printf("It went well for ID: %s\r\n", id)
+	fmt.Printf("Status received is: %s\r\n", resp.Status)
+	fmt.Printf("Body received is: %s\r\n", string(responseBody))
 
 	return nil
 }
