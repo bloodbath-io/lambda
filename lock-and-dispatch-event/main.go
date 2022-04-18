@@ -22,6 +22,7 @@ type Payload struct {
 }
 
 type Response struct {
+	Id string
 	Status string
 	Body string
 }
@@ -31,8 +32,14 @@ func handleRequest(context context.Context, payload Payload) error {
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	fmt.Printf("Response body: %s\r\n", string(response.Body))
 	fmt.Printf("Response status: %s\r\n", string(response.Status))
+
+	err = sendCallback(response)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	return nil
 }
@@ -95,5 +102,38 @@ func sendRequest(context context.Context, payload Payload) (Response, error) {
 		return Response{}, err
 	}
 
-	return Response{Status: resp.Status, Body: string(responseBody)}, nil
+	return Response{Id: id, Status: resp.Status, Body: string(responseBody)}, nil
+}
+
+func sendCallback(response Response) error {
+	callbackEndpoint := "https://api.bloodbath.io/internal/callback"
+
+	body := &Response{
+		Body: response.Body,
+		Status: response.Status,
+	}
+
+	payloadBuf := new(bytes.Buffer)
+	json.NewEncoder(payloadBuf).Encode(body)
+	request, err := http.NewRequest("POST", callbackEndpoint, payloadBuf)
+	if err != nil {
+		return err
+	}
+
+	request.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	endResponse, err := client.Do(request)
+	if err != nil {
+		return err
+	}
+
+	defer endResponse.Body.Close()
+
+	fmt.Println("response Status:", endResponse.Status)
+	fmt.Println("response Headers:", endResponse.Header)
+	endBody, err := ioutil.ReadAll(endResponse.Body)
+	fmt.Println("response Body:", string(endBody))
+
+	return nil
 }
