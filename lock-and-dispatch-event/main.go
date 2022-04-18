@@ -27,11 +27,11 @@ type Payload struct {
 }
 
 type Response struct {
-	Id     string
-	Type   string
-	Status int
-	Body   string
-	Reason string
+	Id     string `json:"id"`
+	Type   string `json:"type"`
+	Status int    `json:"status"`
+	Body   string `json:"body"`
+	Reason string `json:"reason"`
 }
 
 func handleRequest(context context.Context, payload Payload) error {
@@ -130,6 +130,10 @@ func sendCallback(response Response) error {
 
 	payloadBuf := new(bytes.Buffer)
 	json.NewEncoder(payloadBuf).Encode(body)
+
+	out, _ := json.Marshal(body)
+	fmt.Printf("About to send callback: %s\r\n", string(out))
+
 	request, err := http.NewRequest("POST", callbackEndpoint, payloadBuf)
 	if err != nil {
 		return err
